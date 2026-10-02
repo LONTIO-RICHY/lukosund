@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Lukosund — Générateur de fréquence</title>
+<meta name="author" content="LONTIO KESSEL">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#17171a">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --metal-dark: #17171a;
+    --metal: #242426;
+    --metal-light: #2f2f32;
+    --metal-highlight: #3d3d40;
+    --screen-bg: #07120c;
+    --phosphor: #3dffa0;
+    --phosphor-dim: #1e6b47;
+    --amber: #ffb445;
+    --red: #ff5c5c;
+    --text-main: #e4e4e2;
+    --text-muted: #8a8a8f;
+    --text-faint: #55555a;
+    --rivet: #0d0d0e;
+  }
+
+  * { box-sizing: border-box; }
+
+  .ic { vertical-align: -3px; margin-right: 6px; flex-shrink: 0; }
+  .btn-bienetre .ic { margin-right: 5px; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% -10%, #2a2a2d 0%, #101012 55%, #0a0a0b 100%);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+
+  .unite {
+    width: 100%;
+    max-width: 720px;
+    background: linear-gradient(180deg, var(--metal-light) 0%, var(--metal) 8%, var(--metal-dark) 100%);
+    border-radius: 10px;
+    padding: 22px;
+    box-shadow:
+      0 40px 80px -20px rgba(0,0,0,0.7),
+      0 2px 0 rgba(255,255,255,0.04) inset,
+      0 -2px 0 rgba(0,0,0,0.4) inset;
+    position: relative;
+  }
+
+  .rivet {
+    position: absolute;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #4a4a4d, var(--rivet) 70%);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .rivet.tl { top: 12px; left: 12px; }
+  .rivet.tr { top: 12px; right: 12px; }
+  .rivet.bl { bottom: 12px; left: 12px; }
+  .rivet.br { bottom: 12px; right: 12px; }
+
+  /* ---------- En-tête du bandeau ---------- */
+  .bandeau {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 14px 16px;
+  }
+
+  .marque {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    color: var(--text-main);
+  }
+  .marque span { color: var(--phosphor); }
+
+  .sous-marque {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+    margin-top: 2px;
+  }
+
+  .createur {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--phosphor-dim);
+    margin-top: 5px;
+    text-transform: uppercase;
+  }
+
+  .statut {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+  }
+
+  .led-statut {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+    transition: all 0.25s ease;
+  }
+  .led-statut.actif {
+    background: var(--phosphor);
+    box-shadow: 0 0 8px 2px rgba(61,255,160,0.7);
+  }
+
+  /* ---------- Écran oscilloscope ---------- */
+  .ecran-cadre {
+    margin: 0 8px 18px;
+    padding: 10px;
+    background: linear-gradient(180deg, #0a0a0b, #151516);
+    border-radius: 6px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.03);
+  }
+
+  .ecran {
+    position: relative;
+    background: var(--screen-bg);
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.85), inset 0 0 2px rgba(61,255,160,0.15);
+  }
+
+  .ecran canvas { display: block; width: 100%; height: 190px; }
+
+  .ecran-etiquette {
+    position: absolute;
+    top: 9px; left: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    color: var(--phosphor-dim);
+  }
+
+  .lecture-freq {
+    position: absolute;
+    top: 8px; right: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--phosphor);
+    text-shadow: 0 0 10px rgba(61,255,160,0.55);
+    letter-spacing: 0.02em;
+  }
+  .lecture-freq .unite-hz { font-size: 11px; color: var(--phosphor-dim); margin-left: 4px; }
+
+  /* ---------- Sélecteur de mode (générer / écouter) ---------- */
+  .mode-switch {
+    display: flex;
+    gap: 6px;
+    margin: 0 8px 16px;
+    background: var(--metal-dark);
+    padding: 5px;
+    border-radius: 7px;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .mode-btn {
+    flex: 1;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 10px 8px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .mode-btn:hover { color: var(--text-main); }
+  .mode-btn.actif {
+    background: linear-gradient(180deg, #2c2c2f, #232326);
+    border-color: #3a3a3d;
+    color: var(--phosphor);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  /* ---------- Panneau écoute (analyse du son ambiant) ---------- */
+  .panneau-ecoute {
+    margin: 0 8px 18px;
+    background: var(--metal-dark);
+    border-radius: 6px;
+    padding: 20px 18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), inset 0 -1px 0 rgba(0,0,0,0.4);
+    text-align: center;
+  }
+  .panneau-ecoute .ligne-label { text-align: left; }
+
+  .frequence-detectee {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--amber);
+    text-shadow: 0 0 12px rgba(255,180,69,0.5);
+    margin: 14px 0 4px;
+  }
+  .note-detectee {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    min-height: 16px;
+    margin-bottom: 14px;
+  }
+  .btn-micro {
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    padding: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--phosphor-dim);
+    background: linear-gradient(180deg, #163d2a, #0e2a1c);
+    color: var(--phosphor);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-micro:hover { filter: brightness(1.15); }
+  .btn-micro.actif {
+    border-color: #7a2020;
+    background: linear-gradient(180deg, #4d1616, #300d0d);
+    color: var(--red);
+  }
+  .avertissement-micro {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--red);
+    margin-top: 10px;
+    min-height: 14px;
+  }
+  .note-confidentialite {
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  /* ---------- Panneau bien-être ---------- */
+  .panneau-bienetre {
+    margin: 0 8px 16px;
+    background: var(--metal-dark);
+    border-radius: 6px;
+    padding: 16px 18px 18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  .badge-casque {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--amber);
+    background: rgba(255,180,69,0.12);
+    border: 1px solid rgba(255,180,69,0.4);
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  .grille-bienetre {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .btn-bienetre {
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 10px;
+    border-radius: 5px;
+    border: 1px solid #333336;
+    background: linear-gradient(180deg, #232326, #1c1c1e);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.3;
+  }
+  .btn-bienetre .plage-bienetre {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .btn-bienetre:hover { border-color: var(--phosphor-dim); }
+  .btn-bienetre.selectionne {
+    border-color: var(--phosphor);
+    background: linear-gradient(180deg, #1a2e22, #16241c);
+    color: var(--phosphor);
+  }
+  .btn-bienetre.selectionne .plage-bienetre { color: var(--phosphor-dim); }
+
+  .desc-bienetre {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #2b2b2e;
+  }
+  .desc-bienetre strong { color: var(--text-main); }
+
+  /* ---------- Panneau de contrôle ---------- */
+  .panneau-controle {
+    margin: 0 8px 16px;
+    background: var(--metal-dark);
+    border-radius: 6px;
+    padding: 18px 18px 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), inset 0 -1px 0 rgba(0,0,0,0.4);
+  }
+
+  .ligne-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .ligne-label .titre-controle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  /* Fader style table de mixage */
+  .fader-piste {
+    position: relative;
+    height: 34px;
+    display: flex;
+    align-items: center;
+  }
+  input[type="range"].fader {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, var(--phosphor-dim), var(--metal-highlight) 2%, #101011);
+    border-radius: 3px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
+    outline: none;
+  }
+  input[type="range"].fader::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 26px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #d8d8d8, #8f8f92 45%, #57575a);
+    border: 1px solid #1a1a1b;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+    cursor: grab;
+  }
+  input[type="range"].fader::-moz-range-thumb {
+    width: 14px; height: 26px; border-radius: 3px; border: 1px solid #1a1a1b;
+    background: linear-gradient(180deg, #d8d8d8, #8f8f92 45%, #57575a);
+    cursor: grab;
+  }
+
+  .reperes-fader {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+    padding: 0 2px;
+    margin-top: 2px;
+  }
+
+  .avertissement {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--red);
+    margin-top: 8px;
+    min-height: 14px;
+  }
+
+  /* Ligne saisie + presets + volume */
+  .rangee-outils {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .champ-hz {
+    display: flex;
+    align-items: center;
+    background: #0e0e0f;
+    border: 1px solid #333336;
+    border-radius: 4px;
+    padding: 6px 4px 6px 10px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
+  }
+  .champ-hz input {
+    width: 74px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--phosphor);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .champ-hz span { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-faint); padding: 0 6px; }
+
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #38383b;
+    background: linear-gradient(180deg, #2e2e31, #232326);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .btn:hover { background: linear-gradient(180deg, #353538, #29292c); }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-appliquer { color: var(--phosphor); border-color: var(--phosphor-dim); }
+
+  .presets { display: flex; gap: 6px; margin-left: auto; }
+
+  .volume-bloc { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .volume-bloc label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); }
+  input[type="range"].volume {
+    -webkit-appearance: none; width: 84px; height: 4px;
+    background: #101011; border-radius: 2px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+  }
+  input[type="range"].volume::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--amber); box-shadow: 0 0 4px rgba(255,180,69,0.7); cursor: pointer;
+  }
+
+  /* ---------- Bouton lecture principal ---------- */
+  .zone-lecture { display: flex; gap: 10px; margin: 0 8px 18px; }
+  .btn-lecture {
+    flex: 1;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    padding: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--phosphor-dim);
+    background: linear-gradient(180deg, #163d2a, #0e2a1c);
+    color: var(--phosphor);
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: all 0.15s ease;
+  }
+  .btn-lecture:hover { filter: brightness(1.15); }
+  .btn-lecture.actif {
+    border-color: #7a2020;
+    background: linear-gradient(180deg, #4d1616, #300d0d);
+    color: var(--red);
+  }
+
+  /* ---------- Panneau espèces ---------- */
+  .panneau-especes {
+    margin: 0 8px;
+    background: var(--metal-dark);
+    border-radius: 6px;
+    padding: 16px 18px 18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  .grille-especes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px 14px;
+    margin-top: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .grille-especes::-webkit-scrollbar { width: 6px; }
+  .grille-especes::-webkit-scrollbar-thumb { background: #333336; border-radius: 3px; }
+
+  .espece {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-faint);
+    padding: 4px 0;
+    transition: color 0.2s ease;
+  }
+  .espece.audible { color: var(--text-main); }
+
+  .led-espece {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #1c1c1e;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .espece.audible .led-espece {
+    background: var(--phosphor);
+    box-shadow: 0 0 5px 1px rgba(61,255,160,0.65);
+  }
+
+  .espece .plage {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-faint);
+  }
+
+  .compteur-especes {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--phosphor-dim);
+  }
+
+  .note-bas {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 16px;
+    padding: 0 12px;
+    line-height: 1.5;
+  }
+
+  .signature-bas {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+
+  .contacts {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .contact-lien {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 6px 11px;
+    border-radius: 5px;
+    border: 1px solid #2f2f32;
+    background: linear-gradient(180deg, #202022, #1a1a1c);
+    transition: all 0.15s ease;
+  }
+  .contact-lien:hover {
+    color: var(--phosphor);
+    border-color: var(--phosphor-dim);
+  }
+  .contact-lien .ic { margin-right: 0; }
+
+  @media (max-width: 480px) {
+    .presets { margin-left: 0; }
+    .volume-bloc { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="unite">
+  <div class="rivet tl"></div><div class="rivet tr"></div>
+  <div class="rivet bl"></div><div class="rivet br"></div>
+
+  <div class="bandeau">
+    <div>
+      <div class="marque">OSCILLO<span>·</span>X1</div>
+      <div class="sous-marque">Générateur de fréquence sonore</div>
+      <div class="createur">Créé par LONTIO KESSEL</div>
+    </div>
+    <div class="statut">
+      <div class="led-statut" id="ledStatut"></div>
+      <span id="texteStatut">EN VEILLE</span>
+    </div>
+  </div>
+
+  <div class="ecran-cadre">
+    <div class="ecran">
+      <canvas id="scope"></canvas>
+      <div class="ecran-etiquette">FORME D'ONDE — TEMPS RÉEL</div>
+      <div class="lecture-freq" id="lectureFreq">440<span class="unite-hz">Hz</span></div>
+    </div>
+  </div>
+
+  <div class="mode-switch">
+    <button class="mode-btn actif" id="modeGenerateur"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>GÉNÉRER UN SON</button>
+    <button class="mode-btn" id="modeEcoute"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>ÉCOUTER L'ENVIRONNEMENT</button>
+  </div>
+
+  <div id="blocGenerateur">
+  <div class="panneau-controle">
+    <div class="ligne-label">
+      <span class="titre-controle">FRÉQUENCE</span>
+      <span class="titre-controle" id="pctFader">0 — 20 000 Hz</span>
+    </div>
+    <div class="fader-piste">
+      <input type="range" class="fader" id="faderFreq" min="0" max="20000" step="1" value="440">
+    </div>
+    <div class="reperes-fader">
+      <span>0 Hz</span><span>silence · infrasons · audible · ultrasons</span><span>20 000 Hz</span>
+    </div>
+    <div class="avertissement" id="avertissement"></div>
+
+    <div class="rangee-outils">
+      <div class="champ-hz">
+        <input type="text" id="saisieHz" value="440" inputmode="decimal">
+        <span>Hz</span>
+      </div>
+      <button class="btn btn-appliquer" id="btnAppliquer">Appliquer</button>
+
+      <div class="presets">
+        <button class="btn" data-freq="440">La 440</button>
+        <button class="btn" data-freq="1000">1 kHz</button>
+        <button class="btn" data-freq="10000">10 kHz</button>
+      </div>
+    </div>
+
+    <div class="rangee-outils">
+      <div class="volume-bloc">
+        <label>VOLUME</label>
+        <input type="range" class="volume" id="volume" min="0" max="100" value="35">
+      </div>
+    </div>
+  </div>
+
+  <div class="panneau-bienetre">
+    <div class="ligne-label">
+      <span class="titre-controle"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg>FRÉQUENCES BIEN-ÊTRE</span>
+      <span class="badge-casque" id="badgeCasque" style="display:none;"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a9 9 0 0 1 18 0"/><rect x="2" y="13" width="5" height="7" rx="1.5"/><rect x="17" y="13" width="5" height="7" rx="1.5"/></svg>CASQUE RECOMMANDÉ</span>
+    </div>
+    <div class="grille-bienetre" id="grilleBienetre"></div>
+    <div class="desc-bienetre" id="descBienetre">
+      Sélectionnez un objectif pour régler automatiquement la fréquence adaptée.
+    </div>
+  </div>
+
+  <div class="zone-lecture">
+    <button class="btn-lecture" id="btnLecture"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><path d="M6 4l14 8-14 8V4z"/></svg>ÉMETTRE LE SON</button>
+  </div>
+  </div>
+
+  <div class="panneau-ecoute" id="panneauEcoute" style="display:none;">
+    <div class="ligne-label">
+      <span class="titre-controle">FRÉQUENCE DOMINANTE DÉTECTÉE</span>
+      <span class="titre-controle" id="etatMicro">MICRO INACTIF</span>
+    </div>
+    <div class="frequence-detectee" id="frequenceDetectee">— Hz</div>
+    <div class="note-detectee" id="noteDetectee">Activez le micro pour analyser le son ambiant</div>
+    <button class="btn-micro" id="btnMicro"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>ACTIVER LE MICRO</button>
+    <div class="avertissement-micro" id="avertissementMicro"></div>
+    <div class="note-confidentialite">
+      L'analyse se fait entièrement dans votre navigateur : aucun son n'est enregistré ni envoyé où que ce soit.
+    </div>
+  </div>
+
+  <div class="panneau-especes">
+    <div class="ligne-label">
+      <span class="titre-controle"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="17" cy="8" r="2"/><path d="M6 14c0-2 2-3 6-3s6 1 6 3-2 4-6 4-6-2-6-4z"/></svg>QUI PEUT ENTENDRE CETTE FRÉQUENCE ?</span>
+      <span class="compteur-especes" id="compteurEspeces">0 / 22</span>
+    </div>
+    <div class="grille-especes" id="grilleEspeces"></div>
+  </div>
+
+  <div class="note-bas">
+    Plages auditives données à titre indicatif (ordres de grandeur bioacoustiques). La limite technique réelle de reproduction numérique correspond à la moitié du taux d'échantillonnage de votre appareil (théorème de Nyquist-Shannon).
+    <br><span class="signature-bas">OSCILLO·X1 — conçu et développé par LONTIO KESSEL</span>
+
+    <div class="contacts">
+      <a class="contact-lien" href="mailto:lontiokessel@gmail.com" target="_blank" rel="noopener">
+        <svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m3 5 9 7 9-7"/></svg>
+        lontiokessel@gmail.com
+      </a>
+      <a class="contact-lien" href="https://github.com/LONTIO-RICHY" target="_blank" rel="noopener">
+        <svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 6 2 12 8 18"/><polyline points="16 6 22 12 16 18"/></svg>
+        GitHub
+      </a>
+      <a class="contact-lien" href="https://wa.me/237650196251" target="_blank" rel="noopener">
+        <svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.36 7.56L3 20l1.06-5.44A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 9.5c.5 3 2 4.5 5 5"/></svg>
+        WhatsApp
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ICÔNES SVG — remplacent tous les emojis pour un rendu plus sobre
+//  (héritent de la couleur du texte via currentColor)
+// ============================================================
+const ICONES = {
+  son: `<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>`,
+  micro: `<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
+  casque: `<svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a9 9 0 0 1 18 0"/><rect x="2" y="13" width="5" height="7" rx="1.5"/><rect x="17" y="13" width="5" height="7" rx="1.5"/></svg>`,
+  lune: `<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>`,
+  meditation: `<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.3"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+  feuille: `<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20c8 0 14-6 14-14 0 0-13-1-14 9-.5 3 0 5 0 5z"/><path d="M5 20c2-4 5-7 9-9"/></svg>`,
+  vent: `<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 13h15a3 3 0 1 1-3 3"/><path d="M3 18h8a2.5 2.5 0 1 0-2.5-2.5"/></svg>`,
+  halteres: `<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="9" width="3" height="6" rx="1"/><rect x="19.5" y="9" width="3" height="6" rx="1"/><line x1="4.5" y1="12" x2="19.5" y2="12"/><rect x="6.5" y="7" width="2.5" height="10" rx="1"/><rect x="15" y="7" width="2.5" height="10" rx="1"/></svg>`,
+  alerte: `<svg class="ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>`,
+  etincelle: `<svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg>`,
+  pattes: `<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="8" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="17" cy="8" r="2"/><path d="M6 14c0-2 2-3 6-3s6 1 6 3-2 4-6 4-6-2-6-4z"/></svg>`,
+  lecture: `<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><path d="M6 4l14 8-14 8V4z"/></svg>`,
+  stop: `<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>`,
+};
+
+// ============================================================
+//  DONNÉES : plages auditives des êtres vivants (Hz)
+// ============================================================
+const ETRES_VIVANTS = {
+  "Humain":                  [20, 20000],
+  "Chien":                   [40, 60000],
+  "Chat":                    [45, 64000],
+  "Cheval":                  [55, 33500],
+  "Vache":                   [23, 35000],
+  "Souris":                  [1000, 90000],
+  "Rat":                     [200, 76000],
+  "Lapin":                   [96, 49000],
+  "Chauve-souris":           [1000, 120000],
+  "Dauphin":                 [150, 150000],
+  "Baleine":                 [10, 31000],
+  "Éléphant":                [1, 20000],
+  "Girafe":                  [20, 16000],
+  "Pigeon":                  [0.5, 10000],
+  "Poule":                   [125, 2000],
+  "Hibou / Chouette":        [200, 12000],
+  "Perruche":                [200, 8500],
+  "Grenouille":              [50, 10000],
+  "Poisson rouge":           [20, 3000],
+  "Serpent (vibrations sol)":[1, 1000],
+  "Abeille":                 [100, 500],
+  "Papillon de nuit":        [1000, 240000],
+  "Moustique":               [150, 600],
+  "Mouche":                  [100, 3000],
+  "Cafard (vibrations)":     [20, 1000],
+  "Ver de terre (vibrations)": [80, 400],
+  "Sauterelle":              [100, 40000],
+  "Mante religieuse":        [25000, 55000],
+  "Fourmis (vibrations)":    [1000, 4000],
+  "Termite (vibrations)":    [700, 1000],
+};
+
+// ============================================================
+//  DONNÉES : profils de fréquences bien-être
+//  battement = fréquence cible (Hz) obtenue par battement binaural
+//  (deux tons proches, un par oreille — nécessite un casque)
+//  direct = fréquence jouée telle quelle (pas de battement, cas des muscles)
+// ============================================================
+const BIEN_ETRE = {
+  sommeil: {
+    nom: "Sommeil profond", icone: ICONES.lune, min: 0.5, max: 4, battement: 2, porteuse: 150,
+    desc: "Onde <strong>Delta</strong> (0,5 – 4 Hz), associée au sommeil profond réparateur."
+  },
+  meditation: {
+    nom: "Méditation profonde", icone: ICONES.meditation, min: 4, max: 8, battement: 6, porteuse: 180,
+    desc: "Onde <strong>Thêta</strong> (4 – 8 Hz), état méditatif profond entre veille et sommeil."
+  },
+  detente: {
+    nom: "Se détendre", icone: ICONES.feuille, min: 8, max: 12, battement: 10, porteuse: 200,
+    desc: "Onde <strong>Alpha</strong> (8 – 12 Hz), relaxation consciente et calme éveillé."
+  },
+  esprit: {
+    nom: "Apaiser l'esprit", icone: ICONES.vent, min: 8, max: 13, battement: 12, porteuse: 220,
+    desc: "Onde <strong>Alpha</strong> haute (8 – 13 Hz), apaisement mental et réduction du stress perçu."
+  },
+  muscles: {
+    nom: "Relaxer les muscles", icone: ICONES.halteres, min: 40, max: 100, direct: 70,
+    desc: "Fréquence vibratoire directe (40 – 100 Hz), utilisée en sonothérapie pour la détente musculaire — pas un battement binaural, un casque n'est pas nécessaire."
+  },
+};
+
+// ============================================================
+//  AUDIO — Web Audio API
+// ============================================================
+let contexteAudio = null;
+let oscillateur = null;      // mode tonalité simple
+let oscG = null, oscD = null, gainG = null, gainD = null, mergerNode = null; // mode binaural
+let gainNode = null;
+let analyseur = null;
+let enLecture = false;
+let modeBinaural = false;
+let bienEtreSelectionne = null;
+let frequenceActuelle = 440;
+let limiteNyquist = 20000;
+
+function initAudio() {
+  if (contexteAudio) return;
+  contexteAudio = new (window.AudioContext || window.webkitAudioContext)();
+  limiteNyquist = Math.floor(contexteAudio.sampleRate / 2);
+  analyseur = contexteAudio.createAnalyser();
+  analyseur.fftSize = 2048;
+}
+
+function demarrerSon() {
+  oscillateur = contexteAudio.createOscillator();
+  gainNode = contexteAudio.createGain();
+  oscillateur.type = "sine";
+  oscillateur.frequency.setValueAtTime(Math.max(frequenceActuelle, 0.0001), contexteAudio.currentTime);
+  gainNode.gain.setValueAtTime(volumeActuel(), contexteAudio.currentTime);
+
+  oscillateur.connect(gainNode);
+  gainNode.connect(analyseur);
+  gainNode.connect(contexteAudio.destination);
+  oscillateur.start();
+}
+
+function demarrerBinaural(porteuse, battement) {
+  const freqGauche = porteuse - battement / 2;
+  const freqDroite = porteuse + battement / 2;
+
+  oscG = contexteAudio.createOscillator();
+  oscD = contexteAudio.createOscillator();
+  gainG = contexteAudio.createGain();
+  gainD = contexteAudio.createGain();
+  mergerNode = contexteAudio.createChannelMerger(2);
+
+  oscG.type = "sine"; oscD.type = "sine";
+  oscG.frequency.setValueAtTime(freqGauche, contexteAudio.currentTime);
+  oscD.frequency.setValueAtTime(freqDroite, contexteAudio.currentTime);
+  gainG.gain.setValueAtTime(volumeActuel(), contexteAudio.currentTime);
+  gainD.gain.setValueAtTime(volumeActuel(), contexteAudio.currentTime);
+
+  oscG.connect(gainG).connect(mergerNode, 0, 0); // canal gauche
+  oscD.connect(gainD).connect(mergerNode, 0, 1); // canal droit
+  mergerNode.connect(analyseur);
+  mergerNode.connect(contexteAudio.destination);
+
+  oscG.start(); oscD.start();
+}
+
+function arreterSon() {
+  if (oscillateur) {
+    try { oscillateur.stop(); } catch (e) {}
+    oscillateur.disconnect();
+    oscillateur = null;
+  }
+  if (gainNode) { gainNode.disconnect(); gainNode = null; }
+
+  [oscG, oscD].forEach((o) => { if (o) { try { o.stop(); } catch (e) {} o.disconnect(); } });
+  [gainG, gainD, mergerNode].forEach((n) => { if (n) n.disconnect(); });
+  oscG = oscD = gainG = gainD = mergerNode = null;
+}
+
+function volumeActuel() {
+  return (parseFloat(document.getElementById("volume").value) / 100) * 0.4; // plafond raisonnable
+}
+
+// ============================================================
+//  OSCILLOSCOPE — dessin de la forme d'onde
+// ============================================================
+const canvas = document.getElementById("scope");
+const ctx = canvas.getContext("2d");
+
+function redimensionnerCanvas() {
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * ratio;
+  canvas.height = canvas.clientHeight * ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+window.addEventListener("resize", redimensionnerCanvas);
+
+function dessinerGrille(w, h) {
+  ctx.strokeStyle = "rgba(61,255,160,0.08)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= w; x += w / 10) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  for (let y = 0; y <= h; y += h / 4) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+}
+
+function boucleDessin() {
+  requestAnimationFrame(boucleDessin);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.fillStyle = "#07120c";
+  ctx.fillRect(0, 0, w, h);
+  dessinerGrille(w, h);
+
+  const sourceActive = enLecture || micActif;
+
+  if (sourceActive && analyseur) {
+    const bufferLength = analyseur.fftSize;
+    const donnees = new Uint8Array(bufferLength);
+    analyseur.getByteTimeDomainData(donnees);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = micActif ? "#ffb445" : "#3dffa0";
+    ctx.shadowColor = micActif ? "rgba(255,180,69,0.6)" : "rgba(61,255,160,0.65)";
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+
+    const slice = w / bufferLength;
+    let x = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      const v = donnees[i] / 128.0;
+      const y = (v * h) / 2;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      x += slice;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // En mode écoute, on lance en plus la détection de fréquence dominante
+    if (micActif) {
+      const donneesFloat = new Float32Array(bufferLength);
+      analyseur.getFloatTimeDomainData(donneesFloat);
+      const freq = detecterFrequence(donneesFloat, contexteAudio.sampleRate);
+      definirFrequenceDetectee(freq);
+    }
+  } else {
+    // Ligne plate au repos
+    ctx.strokeStyle = "rgba(61,255,160,0.3)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, h / 2);
+    ctx.lineTo(w, h / 2);
+    ctx.stroke();
+  }
+}
+
+// ============================================================
+//  INTERFACE
+// ============================================================
+const faderFreq = document.getElementById("faderFreq");
+const saisieHz = document.getElementById("saisieHz");
+const lectureFreq = document.getElementById("lectureFreq");
+const avertissement = document.getElementById("avertissement");
+const btnLecture = document.getElementById("btnLecture");
+const ledStatut = document.getElementById("ledStatut");
+const texteStatut = document.getElementById("texteStatut");
+const grilleEspeces = document.getElementById("grilleEspeces");
+const compteurEspeces = document.getElementById("compteurEspeces");
+const volumeInput = document.getElementById("volume");
+
+// Construction de la grille des espèces une seule fois
+const elementsEspeces = {};
+Object.keys(ETRES_VIVANTS).forEach((nom) => {
+  const [fmin, fmax] = ETRES_VIVANTS[nom];
+  const el = document.createElement("div");
+  el.className = "espece";
+  el.innerHTML = `<span class="led-espece"></span>${nom}<span class="plage">${fmin}–${fmax >= 1000 ? (fmax/1000)+"k" : fmax}</span>`;
+  grilleEspeces.appendChild(el);
+  elementsEspeces[nom] = el;
+});
+
+function mettreAJourEspeces(freq) {
+  let count = 0;
+  Object.keys(ETRES_VIVANTS).forEach((nom) => {
+    const [fmin, fmax] = ETRES_VIVANTS[nom];
+    const audible = freq !== null && freq >= fmin && freq <= fmax;
+    elementsEspeces[nom].classList.toggle("audible", audible);
+    if (audible) count++;
+  });
+  compteurEspeces.textContent = `${count} / ${Object.keys(ETRES_VIVANTS).length}`;
+}
+
+function formaterFreq(f) {
+  return f >= 1000 ? f.toLocaleString("fr-FR") : String(Math.round(f));
+}
+
+function definirFrequence(freq, depuisFader) {
+  freq = Math.max(0, freq);
+
+  if (freq > limiteNyquist) {
+    freq = limiteNyquist;
+    avertissement.innerHTML = `${ICONES.alerte}Limité à ${limiteNyquist.toLocaleString("fr-FR")} Hz : limite physique de reproduction numérique (Nyquist-Shannon) sur cet appareil.`;
+  } else {
+    avertissement.textContent = "";
+  }
+
+  frequenceActuelle = freq;
+  lectureFreq.innerHTML = `${formaterFreq(freq)}<span class="unite-hz">Hz</span>`;
+  saisieHz.value = Math.round(freq);
+  if (!depuisFader) faderFreq.value = Math.min(freq, 20000);
+
+  mettreAJourEspeces(freq);
+
+  if (enLecture && oscillateur) {
+    oscillateur.frequency.setTargetAtTime(Math.max(freq, 0.0001), contexteAudio.currentTime, 0.01);
+  }
+}
+
+faderFreq.addEventListener("input", (e) => {
+  quitterModeBienEtre();
+  definirFrequence(parseFloat(e.target.value), true);
+});
+
+document.getElementById("btnAppliquer").addEventListener("click", () => {
+  quitterModeBienEtre();
+  const val = parseFloat(saisieHz.value.replace(",", "."));
+  if (!isNaN(val)) definirFrequence(val, false);
+});
+saisieHz.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("btnAppliquer").click();
+});
+
+document.querySelectorAll("[data-freq]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    quitterModeBienEtre();
+    definirFrequence(parseFloat(btn.dataset.freq), false);
+  });
+});
+
+volumeInput.addEventListener("input", () => {
+  if (enLecture && gainNode) {
+    gainNode.gain.setTargetAtTime(volumeActuel(), contexteAudio.currentTime, 0.01);
+  }
+});
+
+btnLecture.addEventListener("click", () => {
+  if (enLecture) {
+    arreterSon();
+    enLecture = false;
+    btnLecture.innerHTML = ICONES.lecture + "ÉMETTRE LE SON";
+    btnLecture.classList.remove("actif");
+    ledStatut.classList.remove("actif");
+    texteStatut.textContent = "EN VEILLE";
+  } else {
+    initAudio();
+    if (contexteAudio.state === "suspended") contexteAudio.resume();
+
+    if (modeBinaural && bienEtreSelectionne) {
+      const info = BIEN_ETRE[bienEtreSelectionne];
+      demarrerBinaural(info.porteuse, info.battement);
+      texteStatut.textContent = "BATTEMENT BINAURAL EN COURS";
+    } else {
+      demarrerSon();
+      texteStatut.textContent = "ÉMISSION EN COURS";
+    }
+    enLecture = true;
+    btnLecture.innerHTML = ICONES.stop + "COUPER LE SON";
+    btnLecture.classList.add("actif");
+    ledStatut.classList.add("actif");
+  }
+});
+
+// ============================================================
+//  PANNEAU BIEN-ÊTRE
+// ============================================================
+const grilleBienetre = document.getElementById("grilleBienetre");
+const descBienetre = document.getElementById("descBienetre");
+const badgeCasque = document.getElementById("badgeCasque");
+const elementsBienetre = {};
+
+Object.keys(BIEN_ETRE).forEach((cle) => {
+  const info = BIEN_ETRE[cle];
+  const btn = document.createElement("button");
+  btn.className = "btn-bienetre";
+  const plageTexte = info.battement
+    ? `${info.min} – ${info.max} Hz (battement)`
+    : `${info.min} – ${info.max} Hz (direct)`;
+  btn.innerHTML = `${info.icone}${info.nom}<span class="plage-bienetre">${plageTexte}</span>`;
+  btn.addEventListener("click", () => selectionnerBienEtre(cle));
+  grilleBienetre.appendChild(btn);
+  elementsBienetre[cle] = btn;
+});
+
+function selectionnerBienEtre(cle) {
+  const info = BIEN_ETRE[cle];
+  bienEtreSelectionne = cle;
+
+  // Remise à zéro visuelle des boutons
+  Object.values(elementsBienetre).forEach((b) => b.classList.remove("selectionne"));
+  elementsBienetre[cle].classList.add("selectionne");
+
+  if (info.direct) {
+    // Cas "muscles" : fréquence directe, pas de battement, pas besoin de casque
+    modeBinaural = false;
+    badgeCasque.style.display = "none";
+    definirFrequence(info.direct, false);
+    descBienetre.innerHTML = info.desc;
+  } else {
+    // Cas battement binaural : on prépare, mais on ne joue qu'au clic sur "ÉMETTRE"
+    modeBinaural = true;
+    badgeCasque.style.display = "inline-block";
+    lectureFreq.innerHTML = `${info.battement}<span class="unite-hz">Hz (battement)</span>`;
+    faderFreq.value = Math.min(info.battement, 20000);
+    saisieHz.value = info.battement;
+    avertissement.textContent = "";
+    mettreAJourEspeces(info.porteuse); // le son physique réel est autour de la porteuse
+    descBienetre.innerHTML = `${info.desc}<br><br>Deux tons proches (${(info.porteuse - info.battement/2).toFixed(1)} Hz et ${(info.porteuse + info.battement/2).toFixed(1)} Hz) sont joués séparément dans chaque oreille : c'est votre cerveau qui perçoit la différence comme un battement à ${info.battement} Hz. La liste ci-dessous reflète qui peut entendre les tons réellement joués, pas l'effet de battement (probablement propre au traitement auditif humain).`;
+  }
+
+  // Si un son était déjà en cours, on relance proprement avec la nouvelle configuration
+  if (enLecture) {
+    arreterSon();
+    if (modeBinaural) {
+      demarrerBinaural(info.porteuse, info.battement);
+      texteStatut.textContent = "BATTEMENT BINAURAL EN COURS";
+    } else {
+      demarrerSon();
+      texteStatut.textContent = "ÉMISSION EN COURS";
+    }
+  }
+}
+
+// Reprise en main manuelle du curseur ou de la saisie = sortie du mode bien-être
+function quitterModeBienEtre() {
+  if (modeBinaural || bienEtreSelectionne) {
+    modeBinaural = false;
+    bienEtreSelectionne = null;
+    badgeCasque.style.display = "none";
+    Object.values(elementsBienetre).forEach((b) => b.classList.remove("selectionne"));
+    descBienetre.textContent = "Sélectionnez un objectif pour régler automatiquement la fréquence adaptée.";
+    if (enLecture) { arreterSon(); demarrerSon(); } // repasse en tonalité simple sans couper le son
+  }
+}
+
+// ============================================================
+//  MODE ÉCOUTE — capture du micro + détection de fréquence
+// ============================================================
+const modeGenerateur = document.getElementById("modeGenerateur");
+const modeEcoute = document.getElementById("modeEcoute");
+const blocGenerateur = document.getElementById("blocGenerateur");
+const panneauEcoute = document.getElementById("panneauEcoute");
+const btnMicro = document.getElementById("btnMicro");
+const etatMicro = document.getElementById("etatMicro");
+const frequenceDetectee = document.getElementById("frequenceDetectee");
+const noteDetectee = document.getElementById("noteDetectee");
+const avertissementMicro = document.getElementById("avertissementMicro");
+
+let micActif = false;
+let fluxMicro = null;
+let sourceMicro = null;
+let freqLissee = null; // moyenne mobile pour stabiliser l'affichage
+
+/**
+ * Détection de la fréquence fondamentale par autocorrélation.
+ * Algorithme standard (méthode ACF) : compare le signal à des
+ * versions décalées de lui-même pour trouver la périodicité dominante.
+ * Retourne -1 si aucune fréquence exploitable n'est trouvée (silence, bruit non tonal).
+ */
+function detecterFrequence(buffer, tauxEchantillonnage) {
+  const taille = buffer.length;
+
+  // Le son est-il assez fort pour être analysé ?
+  let rms = 0;
+  for (let i = 0; i < taille; i++) rms += buffer[i] * buffer[i];
+  rms = Math.sqrt(rms / taille);
+  if (rms < 0.010) return -1;
+
+  // Recadrage sur la zone utile du signal (retire le silence en bordure)
+  let debut = 0, fin = taille - 1;
+  const seuil = 0.2;
+  for (let i = 0; i < taille / 2; i++) { if (Math.abs(buffer[i]) < seuil) { debut = i; break; } }
+  for (let i = 1; i < taille / 2; i++) { if (Math.abs(buffer[taille - i]) < seuil) { fin = taille - i; break; } }
+  const segment = buffer.slice(debut, fin);
+  const n = segment.length;
+  if (n < 8) return -1;
+
+  // Autocorrélation
+  const correlation = new Array(n).fill(0);
+  for (let decalage = 0; decalage < n; decalage++) {
+    for (let i = 0; i < n - decalage; i++) {
+      correlation[decalage] += segment[i] * segment[i + decalage];
+    }
+  }
+
+  let d = 0;
+  while (d < n - 1 && correlation[d] > correlation[d + 1]) d++;
+
+  let maxVal = -1, maxPos = -1;
+  for (let i = d; i < n; i++) {
+    if (correlation[i] > maxVal) { maxVal = correlation[i]; maxPos = i; }
+  }
+  let periode = maxPos;
+  if (periode <= 0) return -1;
+
+  // Interpolation parabolique pour affiner la période trouvée
+  if (periode > 0 && periode < n - 1) {
+    const x1 = correlation[periode - 1], x2 = correlation[periode], x3 = correlation[periode + 1];
+    const a = (x1 + x3 - 2 * x2) / 2;
+    const b = (x3 - x1) / 2;
+    if (a !== 0) periode = periode - b / (2 * a);
+  }
+
+  const freq = tauxEchantillonnage / periode;
+  if (freq < 0.5 || freq > tauxEchantillonnage / 2) return -1;
+  return freq;
+}
+
+function definirFrequenceDetectee(freq) {
+  if (freq === -1) {
+    freqLissee = null;
+    frequenceDetectee.textContent = "— Hz";
+    noteDetectee.textContent = "Aucun son dominant détecté (silence ou bruit non tonal)";
+    mettreAJourEspeces(null);
+    return;
+  }
+
+  // Lissage (moyenne mobile exponentielle) pour éviter que l'affichage tremble
+  freqLissee = freqLissee === null ? freq : freqLissee * 0.75 + freq * 0.25;
+
+  frequenceDetectee.textContent = `${formaterFreq(freqLissee)} Hz`;
+  noteDetectee.textContent = "Estimation en direct — varie avec le bruit ambiant";
+  mettreAJourEspeces(freqLissee);
+}
+
+async function activerMicro() {
+  initAudio();
+  if (contexteAudio.state === "suspended") await contexteAudio.resume();
+
+  try {
+    fluxMicro = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (erreur) {
+    let msg = "Accès au micro refusé ou indisponible sur cet appareil/navigateur.";
+    if (!window.isSecureContext || !navigator.mediaDevices) {
+      msg = "Le micro nécessite une page sécurisée (HTTPS). Ouvrez l'application depuis son adresse en ligne.";
+    } else if (erreur && erreur.name === "NotAllowedError") {
+      msg = "Permission du micro refusée. Autorisez le micro dans les paramètres de l'application ou du navigateur.";
+    } else if (erreur && erreur.name === "NotFoundError") {
+      msg = "Aucun micro détecté sur cet appareil.";
+    }
+    avertissementMicro.innerHTML = `${ICONES.alerte}${msg}`;
+    return;
+  }
+
+  avertissementMicro.textContent = "";
+  sourceMicro = contexteAudio.createMediaStreamSource(fluxMicro);
+  sourceMicro.connect(analyseur); // pas de connexion vers destination : on ne renvoie jamais le micro dans les haut-parleurs
+
+  micActif = true;
+  btnMicro.innerHTML = ICONES.stop + "ARRÊTER LE MICRO";
+  btnMicro.classList.add("actif");
+  etatMicro.textContent = "MICRO ACTIF";
+  ledStatut.classList.add("actif");
+  texteStatut.textContent = "ANALYSE DU SON AMBIANT";
+}
+
+function arreterMicro() {
+  if (sourceMicro) { sourceMicro.disconnect(); sourceMicro = null; }
+  if (fluxMicro) { fluxMicro.getTracks().forEach((t) => t.stop()); fluxMicro = null; }
+  micActif = false;
+  freqLissee = null;
+  btnMicro.innerHTML = ICONES.micro + "ACTIVER LE MICRO";
+  btnMicro.classList.remove("actif");
+  etatMicro.textContent = "MICRO INACTIF";
+  frequenceDetectee.textContent = "— Hz";
+  noteDetectee.textContent = "Activez le micro pour analyser le son ambiant";
+  mettreAJourEspeces(null);
+  ledStatut.classList.remove("actif");
+  texteStatut.textContent = "EN VEILLE";
+}
+
+btnMicro.addEventListener("click", () => {
+  if (micActif) arreterMicro(); else activerMicro();
+});
+
+function passerEnModeGenerateur() {
+  if (micActif) arreterMicro();
+  modeGenerateur.classList.add("actif");
+  modeEcoute.classList.remove("actif");
+  blocGenerateur.style.display = "";
+  panneauEcoute.style.display = "none";
+}
+
+function passerEnModeEcoute() {
+  if (enLecture) btnLecture.click(); // coupe le son généré avant de passer en écoute
+  modeEcoute.classList.add("actif");
+  modeGenerateur.classList.remove("actif");
+  blocGenerateur.style.display = "none";
+  panneauEcoute.style.display = "";
+}
+
+modeGenerateur.addEventListener("click", passerEnModeGenerateur);
+modeEcoute.addEventListener("click", passerEnModeEcoute);
+
+// Initialisation
+redimensionnerCanvas();
+definirFrequence(440, false);
+boucleDessin();
+
+</script>
+
+<style>
+  #bandeau-hors-ligne {
+    position: fixed;
+    left: 12px; right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 9999;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 14px 16px;
+    background: #101012;
+    border: 1px solid var(--phosphor);
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    display: none;
+  }
+  #bandeau-hors-ligne.visible { display: block; }
+  #bandeau-hors-ligne strong { color: var(--phosphor); }
+  #bandeau-hors-ligne .astuce { color: var(--text-muted); margin-top: 6px; display: block; }
+  #bandeau-hors-ligne button {
+    margin-top: 10px;
+    background: var(--phosphor);
+    color: #07120c;
+    border: 0;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+  }
+</style>
+
+<div id="bandeau-hors-ligne" role="status">
+  <strong>✓ Lukosund est prêt pour une utilisation hors ligne.</strong><br>
+  Vous pouvez maintenant couper votre connexion Internet.
+  <span class="astuce">Si l'application ne s'ouvre pas un jour (cache vidé, données effacées),
+  réactivez simplement votre connexion Internet, ouvrez Lukosund une fois,
+  puis désactivez-la de nouveau.</span>
+  <button type="button" id="bandeau-ok">OK</button>
+</div>
+
+<script>
+(function () {
+  if (!("serviceWorker" in navigator)) return;
+
+  const bandeau = document.getElementById("bandeau-hors-ligne");
+  const CLE = "lukosund_pret_hors_ligne";
+
+  function dejaVu() {
+    try { return localStorage.getItem(CLE) === "1"; } catch (e) { return false; }
+  }
+  function marquerVu() {
+    try { localStorage.setItem(CLE, "1"); } catch (e) {}
+  }
+
+  document.getElementById("bandeau-ok").addEventListener("click", () => {
+    bandeau.classList.remove("visible");
+    marquerVu();
+  });
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+
+    // "ready" = le service worker est actif, donc les fichiers sont en cache
+    navigator.serviceWorker.ready.then(() => {
+      if (!dejaVu()) bandeau.classList.add("visible");
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
